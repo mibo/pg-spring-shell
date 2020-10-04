@@ -17,6 +17,7 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter")
+	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.shell:spring-shell-starter:2.0.1.RELEASE")
 	implementation("org.junit.jupiter:junit-jupiter:5.7.0")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
