@@ -1,5 +1,10 @@
 # Spring Shell Playground
 
+## Start with profile
+
+  - Option 1: Java System Properties (VM Arguments): `java -jar -Dspring.profiles.active=local application.jar`
+  - Option 2: Program arguments: `java -jar application.jar --spring.profiles.active=prod --spring.config.location=./config`
+
 ### Reference Documentation
 For further reference, please consider the following sections:
 
