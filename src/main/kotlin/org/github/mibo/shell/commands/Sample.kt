@@ -3,7 +3,6 @@ package org.github.mibo.shell.commands
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 
-
 @ShellComponent
 class Sample {
   @ShellMethod("Add two integers together.")

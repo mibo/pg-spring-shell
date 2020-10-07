@@ -1,0 +1,7 @@
+github:
+  dev:
+    token: 123
+    url: https://github.com
+  prod:
+    token: 456
+    url: https://www.github.com
