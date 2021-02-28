@@ -1,7 +1,11 @@
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
 github:
   dev:
     token: 123
-    url: https://github.com
+    url: https://api.github.com
   prod:
     token: 456
-    url: https://www.github.com
+    url: https://api.github.com

@@ -1,15 +1,26 @@
 package org.github.mibo.shell.commands
 
+import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.core.env.Environment
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
+import java.net.URI
+import org.springframework.shell.Availability
+
+
+
 
 @ShellComponent
 class GitHubCmd(val config: Environment) {
 
-  var env: String = "dev"
   val prefix = "github"
+
+  var env: String = "dev"
+  var repo = ""
 
   @ShellMethod("Set env")
   fun env(@ShellOption(defaultValue = "dev") env: String) {
@@ -18,6 +29,49 @@ class GitHubCmd(val config: Environment) {
       this.env = env
     } else {
       println("Unable to change env to $env (keep ${this.env})")
+    }
+  }
+
+  @ShellMethod("Repository")
+  fun repo(@ShellOption repo: String) {
+    this.repo = repo
+    println("Changed repo to $repo")
+  }
+
+  fun searchAvailability(): Availability? {
+    return if (repo.isEmpty()) Availability.unavailable("no repository set") else Availability.available()
+  }
+
+  //https://api.github.com/search/code\?q=test+in:file+language:kotlin+repo:mibo/miftp
+  @ShellMethod("Search")
+  fun search(searchTerms: List<String>) {
+    println("Search params: $searchTerms")
+    val searchQuery = searchTerms.joinToString("+")
+    val query = if (repo.isEmpty()) searchQuery else "$searchQuery+repo:$repo"
+    println("Search query: $query")
+    val uri = URI(baseUrl("/search/code?q=$query"))
+    println("Request url: ${uri.toString()}")
+    val rest = RestTemplateBuilder().build()
+    val headers = HttpHeaders()
+    headers.set("Accept", "application/vnd.github.v3+json")
+    val response = rest.exchange(uri, HttpMethod.GET, HttpEntity(null, headers), String::class.java)
+    response.body?.let { println(it) }
+  }
+
+  private fun baseUrl(postfix: String): String {
+
+    var normalizedPostfix = if (postfix.endsWith("/")) postfix.substring(0, postfix.length-2) else postfix
+    normalizedPostfix = if (normalizedPostfix.startsWith("/")) normalizedPostfix.substring(1) else normalizedPostfix
+    val baseurl = config.getProperty("$prefix.$env.url")
+    println("Url: $baseurl")
+
+    if (baseurl == null) {
+      throw IllegalStateException();
+    }
+    return if (baseurl.endsWith("/")) {
+      baseurl + normalizedPostfix
+    } else {
+      "$baseurl/$normalizedPostfix"
     }
   }
 
