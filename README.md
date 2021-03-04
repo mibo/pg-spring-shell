@@ -4,6 +4,7 @@
 
   - Option 1: Java System Properties (VM Arguments): `java -jar -Dspring.profiles.active=local application.jar`
   - Option 2: Program arguments: `java -jar application.jar --spring.profiles.active=prod --spring.config.location=./config`
+  - Option 2b: Program arguments for GitHub sample: `java -jar application.jar --spring.profiles.active=sample`
 
 ### Reference Documentation
 For further reference, please consider the following sections:
