@@ -1,5 +1,7 @@
 package org.github.mibo.shell.commands
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
@@ -10,6 +12,10 @@ import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
 import java.net.URI
 import org.springframework.shell.Availability
+import com.google.gson.JsonObject
+
+
+
 
 
 
@@ -55,7 +61,11 @@ class GitHubCmd(val config: Environment) {
     val headers = HttpHeaders()
     headers.set("Accept", "application/vnd.github.v3+json")
     val response = rest.exchange(uri, HttpMethod.GET, HttpEntity(null, headers), String::class.java)
-    response.body?.let { println(it) }
+    response.body?.let {
+      val gson = GsonBuilder().setPrettyPrinting().create()
+      val json = gson.fromJson(it, JsonObject::class.java)
+      println(gson.toJson(json))
+    }
   }
 
   private fun baseUrl(postfix: String): String {
