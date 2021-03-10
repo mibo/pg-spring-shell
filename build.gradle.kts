@@ -1,3 +1,5 @@
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -24,6 +26,14 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
+}
+
+
+tasks.withType<Jar> {
+	manifest.attributes["Build-Version"] = project.version
+	manifest.attributes["Build-Date"] = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+	archiveFileName.set("pg-spring-shell.jar")
+	println("Find assembled jar (v${project.version}) at: ${archiveFile.get()}")
 }
 
 tasks.withType<Test> {
