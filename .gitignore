@@ -2,6 +2,7 @@
 .gradle
 .idea
 build
+_mi*
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Kotlin template

@@ -9,3 +9,10 @@ github:
   prod:
     token: 456
     url: https://api.github.com
+secureConnect:
+  oauth2:
+    endpoint: http://...
+    clientid: client
+    clientsecret: ...
+  connect:
+    baseurl: https://...

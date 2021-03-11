@@ -1,24 +1,17 @@
 package org.github.mibo.shell.commands
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.shell.Availability
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
 import java.net.URI
-import org.springframework.shell.Availability
-import com.google.gson.JsonObject
-
-
-
-
-
-
 
 @ShellComponent
 class GitHubCmd(val config: Environment) {
