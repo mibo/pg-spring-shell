@@ -17,5 +17,7 @@ For further reference, please consider the following sections:
 ### Additional Links
 These additional references should also help you:
 
-  * [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
-
+  * Gradle
+      * [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
+      * [Structuring and Building a Software Component with Gradle](https://docs.gradle.org/current/userguide/multi_project_builds.html)
+      * [Building Java Applications with libraries Sample](https://docs.gradle.org/current/samples/sample_building_java_applications_multi_project.html)
