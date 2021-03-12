@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
+import org.springframework.shell.standard.ShellOption
 import java.net.URI
 
 @ShellComponent
@@ -29,28 +30,32 @@ class SecureConnect(val config: Environment) {
   }
 
   @ShellMethod("Request with token")
-  fun get() {
+  fun get(@ShellOption(value = ["-u", "--url"]) urlName: String) {
     if (!connected) {
       secon()
     }
-    val url = config.getRequiredProperty("secureConnect.connect.baseurl")
-    val uri = URI(url)
-    val rest = RestTemplateBuilder().build()
-    val headers = HttpHeaders()
-    headers["Authorization"] = "Bearer $token"
-    val requestEntity = HttpEntity(null, headers)
-    println("Send get request to $url")
-//    println("Request headers $headers")
-    val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
-//    println(response.statusCode)
-    if (response.statusCode.is2xxSuccessful) {
-      response.body?.let {
-        val gson = GsonBuilder().setPrettyPrinting().create()
-        val json = gson.fromJson(it, JsonObject::class.java)
-        println(gson.toJson(json))
+    val url = config.getProperty("secureConnect.connect.urls.$urlName")
+    if (url != null) {
+      val uri = URI(url)
+      val rest = RestTemplateBuilder().build()
+      val headers = HttpHeaders()
+      headers["Authorization"] = "Bearer $token"
+      val requestEntity = HttpEntity(null, headers)
+      println("Send get request to $url")
+  //    println("Request headers $headers")
+      val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
+  //    println(response.statusCode)
+      if (response.statusCode.is2xxSuccessful) {
+        response.body?.let {
+          val gson = GsonBuilder().setPrettyPrinting().create()
+          val json = gson.fromJson(it, JsonObject::class.java)
+          println(gson.toJson(json))
+        }
+      } else {
+        println("Not successful request: ${response.statusCode}")
       }
     } else {
-      println("Not successful request: ${response.statusCode}")
+      println("Given url name $urlName is not configured")
     }
   }
 }
