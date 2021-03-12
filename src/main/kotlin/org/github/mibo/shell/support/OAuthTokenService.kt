@@ -10,7 +10,6 @@ import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.util.EntityUtils
-import org.springframework.http.HttpEntity
 
 import java.io.IOException
 
@@ -42,14 +41,16 @@ class OAuthTokenService {
     httpPost.setEntity(UrlEncodedFormEntity(params))
     httpPost.setHeader("Accept", "application/json")
     httpPost.setHeader("Content-type", "application/x-www-form-urlencoded")
+    println("Request token from $oAuthUrl")
     return httpPost
   }
 
   @Throws(ClientProtocolException::class, IOException::class)
   private fun execute(client: CloseableHttpClient, httpPost: HttpPost): String {
     client.execute(httpPost).use { response ->
-      val responseEntity = response.entity
-      val json = gson.fromJson(responseEntity.toString(), JsonObject::class.java)
+      val responseBody = EntityUtils.toString(response.entity)
+      println("Response: $responseBody" )
+      val json = gson.fromJson(responseBody, JsonObject::class.java)
       println("Json: $json")
       return json.get("access_token").asString
     }
