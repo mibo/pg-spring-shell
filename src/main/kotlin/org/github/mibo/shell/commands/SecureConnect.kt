@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
+import java.lang.IllegalArgumentException
 import java.net.URI
 
 @ShellComponent
@@ -30,18 +31,20 @@ class SecureConnect(val config: Environment) {
   }
 
   @ShellMethod("Request with token")
-  fun get(@ShellOption(value = ["-u", "--url"]) urlName: String) {
+  fun get(@ShellOption(value = ["-u", "--url"]) urlName: String,
+          @ShellOption(value = ["-p", "--param"]) params: List<String>) {
+
     if (!connected) {
       secon()
     }
     val url = config.getProperty("secureConnect.connect.urls.$urlName")
     if (url != null) {
-      val uri = URI(url)
+      val uri = URI(replacePlaceholder(url, params))
       val rest = RestTemplateBuilder().build()
       val headers = HttpHeaders()
       headers["Authorization"] = "Bearer $token"
       val requestEntity = HttpEntity(null, headers)
-      println("Send get request to $url")
+      println("Send get request to $uri")
   //    println("Request headers $headers")
       val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
   //    println(response.statusCode)
@@ -57,5 +60,20 @@ class SecureConnect(val config: Environment) {
     } else {
       println("Given url name $urlName is not configured")
     }
+  }
+
+  private fun replacePlaceholder(url: String, params: List<String>): String {
+    println("Replace placeholders in $url with $params")
+    val regex = Regex("\\{}")
+    val placeholderCount = regex.findAll(url).count()
+    if (placeholderCount != params.size) {
+      println("Placeholder count not fit to parameter count")
+      throw IllegalArgumentException("Placeholder count not fit to parameter count")
+    }
+    var result = url
+    params.forEach {
+      result = result.replaceFirst("{}", it)
+    }
+    return result
   }
 }
