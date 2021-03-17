@@ -1,0 +1,20 @@
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
+github:
+  dev:
+    token: 123
+    url: https://api.github.com
+  prod:
+    token: 456
+    url: https://api.github.com
+secureConnect:
+  oauth2:
+    endpoint: http://...
+    clientid: client
+    clientsecret: ...
+  connect:
+    urls:
+      baseurl: http://baseurl...
+      otherurl: http://another-url/{}/placeholder/test
