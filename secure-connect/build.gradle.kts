@@ -17,6 +17,7 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 dependencies {
 	// all dependencies declared in `pg-spring-shell.java-common-conventions.gradle.kts`
+	implementation("org.yaml:snakeyaml:1.21")
 }
 
 

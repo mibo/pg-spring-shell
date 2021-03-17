@@ -13,6 +13,7 @@ For further reference, please consider the following sections:
   * [Kotlin documentation](https://kotlinlang.org/docs/tutorials/getting-started.html)
   * [Spring Shell Reference Documentation](https://docs.spring.io/spring-shell/docs/current/reference/htmlsingle/)
   * [CLI with Spring Shell by Baeldung](https://www.baeldung.com/spring-shell-cli)
+  * [Pass arguments to CLI](https://codeboje.de/spring-boot-commandline-app-args/)
 
 ### Additional Links
 These additional references should also help you:
