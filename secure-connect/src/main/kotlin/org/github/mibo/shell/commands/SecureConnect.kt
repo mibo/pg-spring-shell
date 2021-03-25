@@ -19,6 +19,7 @@ import java.lang.IllegalArgumentException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.*
 
 @ShellComponent
 class SecureConnect(val env: Environment, val args: ApplicationArguments) {
@@ -36,61 +37,82 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     val configName = configArg[0]
     println("Config name: $configName")
     val yaml = Yaml()
-    if (Files.exists(Path.of(configName))) {
-      val obj: Map<String, Any> = yaml.load(FileInputStream(File(configName)))
-      println(obj)
-      return obj
+    val configPath = Path.of(configName)
+    if (Files.exists(configPath)) {
+      return yaml.load(FileInputStream(File(configName)))
     } else {
-      println("No file found at ${Path.of(configName)}. Try classpath.")
+      println("No file found at $configPath. Try classpath with ${configPath.fileName}.")
       val inputStream = this.javaClass
         .classLoader
-        .getResourceAsStream(configName)
-      val obj: Map<String, Any> = yaml.load(inputStream)
-      println(obj)
-      return obj
+        .getResourceAsStream(configPath.fileName.toString())
+      return yaml.load(inputStream)
     }
   }
 
   @ShellMethod("Secure Connect to server")
-  fun secon() {
-//    loadConfig()
-//  fun connect(@ShellOption(value = ["-u", "--url"]) url: String) {
-    val endpoint = getProperty("secureConnect", "oauth2", "endpoint")
-    val clientId = getProperty("secureConnect", "oauth2", "clientid")
-    val clientSecret = getProperty("secureConnect", "oauth2", "clientsecret")
+  fun connect() {
+    val endpoint = getRequiredProperty("oauth2", "endpoint")
+    val clientId = getRequiredProperty("oauth2", "clientid")
+    val clientSecret = getRequiredProperty("oauth2", "clientsecret")
     token = OAuthTokenService().jwtToken(clientId, clientSecret, endpoint)
-//    println("Token: $token")
   }
 
-  fun getProperty(vararg name: String): String {
+
+  @ShellMethod("Show current config settings")
+  fun config() {
+    println("Endpoint: ${getProperty("oauth2", "clientid").orElse("<not set>")}")
+    println("Client id: ${getProperty("oauth2", "clientid").isPresent}")
+    println("Client secret: ${getProperty("oauth2", "clientsecret").isPresent}")
+    urls()
+  }
+
+  fun getProperty(vararg names: String): Optional<String> {
     var map = config
     var value: Any? = null
-    for (n in name) {
-      value = map[n]
+    var counter = 0
+    for (name in names) {
+      value = map[name]
       if (value is Map<*, *>) {
         map = value as Map<String, Any>
+        counter++
       }
     }
-    return value as String
-//    return getPropertyR(config, name)
+    if (counter == names.size-1) {
+      if (value is String) {
+        return Optional.of(value)
+      }
+    }
+    return Optional.empty()
   }
 
-//  fun getPropertyR(config: Map<String, Any>, vararg name: String): String {
-//    for (n in name) {
-//
-//    }
-//  }
+  fun getPropertyMap(vararg names: String): Optional<Map<String, Any>> {
+    var map = config
+    var value: Any?
+    for (name in names) {
+      value = map[name]
+      if (value is Map<*, *>) {
+        map = value as Map<String, Any>
+      } else {
+        return Optional.empty()
+      }
+    }
+    return Optional.of(map)
+  }
 
-  @ShellMethod("Request with token")
+  fun getRequiredProperty(vararg names: String): String {
+    return getProperty(*names).orElseThrow()
+  }
+
+  @ShellMethod(key = ["get", "g"], value = "Get request with token")
   fun get(@ShellOption(value = ["-u", "--url"]) urlName: String,
-          @ShellOption(value = ["-p", "--param"]) params: List<String>) {
+          @ShellOption(value = ["-p", "--param"], defaultValue = "") params: List<String>) {
 
     if (!connected) {
-      secon()
+      connect()
     }
-    val url = env.getProperty("secureConnect.connect.urls.$urlName")
-    if (url != null) {
-      val uri = URI(replacePlaceholder(url, params))
+    val url = getProperty("urls", urlName)
+    if (url.isPresent) {
+      val uri = URI(replacePlaceholder(url.get(), params))
       val rest = RestTemplateBuilder().build()
       val headers = HttpHeaders()
       headers["Authorization"] = "Bearer $token"
@@ -110,6 +132,16 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
       }
     } else {
       println("Given url name $urlName is not configured")
+    }
+  }
+
+  @ShellMethod("List all configured urls")
+  fun urls() {
+    val url = getPropertyMap("urls")
+    url.ifPresent {
+      for (entry in it.entries) {
+        println("Url name ${entry.key} => ${entry.value}")
+      }
     }
   }
 
