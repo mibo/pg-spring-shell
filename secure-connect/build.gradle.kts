@@ -12,11 +12,12 @@ plugins {
 }
 
 group = "org.github.mibo"
-version = "0.1.0-SNAPSHOT"
+version = "0.1.0"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 dependencies {
 	// all dependencies declared in `pg-spring-shell.java-common-conventions.gradle.kts`
+	implementation("org.yaml:snakeyaml:1.21")
 }
 
 
