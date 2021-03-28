@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import org.github.mibo.shell.support.OAuthTokenService
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.web.client.RestTemplateBuilder
+import org.springframework.core.convert.converter.Converter
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -12,6 +13,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
+import org.springframework.stereotype.Component
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 import java.io.FileInputStream
@@ -105,7 +107,8 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
 
   @ShellMethod(key = ["get", "g"], value = "Get request with token")
   fun get(@ShellOption(value = ["-u", "--url"]) urlName: String,
-          @ShellOption(value = ["-p", "--param"], defaultValue = "") params: List<String>) {
+          @ShellOption(value = ["-p", "--param"], defaultValue = "") params: List<String>,
+          @ShellOption(value = ["-h", "--header"], defaultValue = "") headers: HttpHeaders ) {
 
     if (!connected) {
       connect()
@@ -114,11 +117,10 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     if (url.isPresent) {
       val uri = URI(replacePlaceholder(url.get(), params))
       val rest = RestTemplateBuilder().build()
-      val headers = HttpHeaders()
       headers["Authorization"] = "Bearer $token"
       val requestEntity = HttpEntity(null, headers)
       println("Send get request to $uri")
-  //    println("Request headers $headers")
+//      println("Request headers $headers")
       val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
   //    println(response.statusCode)
       if (response.statusCode.is2xxSuccessful) {
@@ -158,5 +160,22 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
       result = result.replaceFirst("{}", it)
     }
     return result
+  }
+
+  @Component
+  internal class CustomDomainConverter : Converter<String, HttpHeaders> {
+    override fun convert(headersParam: String): HttpHeaders {
+      val httpHeaders = HttpHeaders()
+      val headers = headersParam.split(",")
+      headers.forEach {
+        val keyValue = it.split(":")
+        if (keyValue.size == 2) {
+          httpHeaders[keyValue[0]] = listOf(keyValue[1])
+        } else {
+          println("Invalid header format. Specify each header as `name:value`.")
+        }
+      }
+      return httpHeaders
+    }
   }
 }
