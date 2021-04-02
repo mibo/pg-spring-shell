@@ -7,3 +7,8 @@ secureConnect:
     urls:
       url-name: https://<host>/some/url
       another-url: https://<host>/another/{}/url
+      url-with-headers:
+        url: https://<host>/another/{}/url
+        headers:
+          first: value
+          second: another-value

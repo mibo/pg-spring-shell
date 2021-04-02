@@ -27,6 +27,7 @@ import java.util.*
 class SecureConnect(val env: Environment, val args: ApplicationArguments) {
 
   private var connected = false
+  private var verbose = false
   private var token: String = "<not requested>"
   private val config = loadConfig()
 
@@ -51,6 +52,12 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     }
   }
 
+  @ShellMethod("Set verbosity")
+  fun verbose(@ShellOption(value = ["off"]) off: Boolean) {
+    println("Set verbose to ${!off} (was ${this.verbose})")
+    this.verbose = !off
+  }
+
   @ShellMethod("Secure Connect to server")
   fun connect() {
     val endpoint = getRequiredProperty("oauth2", "endpoint")
@@ -58,7 +65,6 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     val clientSecret = getRequiredProperty("oauth2", "clientsecret")
     token = OAuthTokenService().jwtToken(clientId, clientSecret, endpoint)
   }
-
 
   @ShellMethod("Show current config settings")
   fun config() {
@@ -113,14 +119,17 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     if (!connected) {
       connect()
     }
-    val url = getProperty("urls", urlName)
+    val url = readUrl(urlName)
     if (url.isPresent) {
-      val uri = URI(replacePlaceholder(url.get(), params))
+      val uri = URI(replacePlaceholder(url.get().url, params))
       val rest = RestTemplateBuilder().build()
       headers["Authorization"] = "Bearer $token"
+      headers.addAll(url.get().headers)
       val requestEntity = HttpEntity(null, headers)
       println("Send get request to $uri")
-//      println("Request headers $headers")
+      if (verbose) {
+        println("Request headers $headers")
+      }
       val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
   //    println(response.statusCode)
       if (response.statusCode.is2xxSuccessful) {
@@ -147,6 +156,26 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     }
   }
 
+  private fun readUrl(url: String): Optional<UrlConfig> {
+    val urls = getPropertyMap("urls")
+                .orElseThrow { IllegalArgumentException("No urls property found in config") }
+    val urlConfig = urls[url]
+    if (urlConfig is String) {
+      return Optional.of(UrlConfig(urlConfig, HttpHeaders.EMPTY))
+    } else if (urlConfig is Map<*, *>) {
+      val configUrl = urlConfig["url"] as String
+      val configHeaders = urlConfig["headers"] as Map<String, *>
+      val httpHeaders = HttpHeaders()
+      configHeaders.entries.forEach { httpHeaders.add(it.key, String.format("%s", it.value)) }
+      return Optional.of(UrlConfig(configUrl, httpHeaders))
+    }
+    println("Given url name $url is not configured")
+    return Optional.empty()
+  }
+
+  class UrlConfig(val url: String, val headers: HttpHeaders) {
+  }
+
   private fun replacePlaceholder(url: String, params: List<String>): String {
     println("Replace placeholders in $url with $params")
     val regex = Regex("\\{}")
@@ -165,6 +194,9 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
   @Component
   internal class CustomDomainConverter : Converter<String, HttpHeaders> {
     override fun convert(headersParam: String): HttpHeaders {
+      if (headersParam.isEmpty()) {
+        return HttpHeaders.EMPTY
+      }
       val httpHeaders = HttpHeaders()
       val headers = headersParam.split(",")
       headers.forEach {

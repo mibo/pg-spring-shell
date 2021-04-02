@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Planned changes/updates/fixes/features for to be part of one of the next _releases/versions_:
   * ...
 
+## [0.2.0] - 2021-04-02
+### Added
+  * Support for headers in configuration files
+
 ## [0.1.1] - 2021-03-29
 ### Added
   * Support for headers in GET request
