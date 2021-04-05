@@ -1,14 +1,12 @@
-secureConnect:
-  oauth2:
-    endpoint: https://<baseurl>/oauth/token
-    clientid: <client-id>
-    clientsecret: <client-secret>
-  connect:
-    urls:
-      url-name: https://<host>/some/url
-      another-url: https://<host>/another/{}/url
-      url-with-headers:
-        url: https://<host>/another/{}/url
-        headers:
-          first: value
-          second: another-value
+oauth2:
+  endpoint: https://<baseurl>/oauth/token
+  clientid: <client-id>
+  clientsecret: <client-secret>
+urls:
+  url-name: https://<host>/some/url
+  another-url: https://<host>/another/{}/url
+  url-with-headers:
+    url: https://<host>/another/{}/url
+    headers:
+      first: value
+      second: another-value

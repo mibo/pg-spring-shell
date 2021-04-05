@@ -12,6 +12,9 @@ Planned changes/updates/fixes/features for to be part of one of the next _releas
 ### Added
   * ...
 
+### Fixed
+  * Fixed wrong `config-template.yaml`  
+
 ## [0.2.0] - 2021-04-02
 ### Added
   * Support for headers in configuration files
