@@ -1,5 +1,6 @@
 package org.github.mibo.shell.support
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import org.apache.http.NameValuePair
@@ -21,7 +22,7 @@ import java.lang.Exception
 
 class OAuthTokenService {
 
-  val gson = GsonBuilder().setPrettyPrinting().create()
+  private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
   @Throws(IOException::class)
   private fun post(clientId: String, clientSecret: String, oAuthUrl: String): String {
@@ -31,17 +32,17 @@ class OAuthTokenService {
   }
 
   @Throws(UnsupportedEncodingException::class)
-  private fun prepareRequest(clientId: String, clientSecret: String, oAuthUrl: String): HttpPost {
-    val httpPost = HttpPost(oAuthUrl)
+  private fun prepareRequest(clientId: String, clientSecret: String, oauthUrl: String): HttpPost {
+    val httpPost = HttpPost(oauthUrl)
     val params: MutableList<NameValuePair> = ArrayList()
     params.add(BasicNameValuePair("grant_type", "client_credentials"))
     params.add(BasicNameValuePair("client_id", clientId))
     params.add(BasicNameValuePair("client_secret", clientSecret))
     params.add(BasicNameValuePair("response_type", "token"))
-    httpPost.setEntity(UrlEncodedFormEntity(params))
+    httpPost.entity = UrlEncodedFormEntity(params)
     httpPost.setHeader("Accept", "application/json")
     httpPost.setHeader("Content-type", "application/x-www-form-urlencoded")
-    println("Request token from $oAuthUrl")
+    println("Request token from $oauthUrl")
     return httpPost
   }
 
@@ -49,9 +50,9 @@ class OAuthTokenService {
   private fun execute(client: CloseableHttpClient, httpPost: HttpPost): String {
     client.execute(httpPost).use { response ->
       val responseBody = EntityUtils.toString(response.entity)
-      println("Response: $responseBody" )
+//      println("Response: $responseBody" )
       val json = gson.fromJson(responseBody, JsonObject::class.java)
-      println("Json: $json")
+//      println("Json: $json")
       return json.get("access_token").asString
     }
   }
@@ -64,5 +65,4 @@ class OAuthTokenService {
     }
     return ""
   }
-
 }
