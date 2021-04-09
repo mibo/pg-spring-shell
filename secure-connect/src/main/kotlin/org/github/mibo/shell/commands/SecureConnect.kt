@@ -10,6 +10,7 @@ import org.springframework.core.env.Environment
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.ResponseEntity
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
@@ -28,6 +29,7 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
 
   private var connected = false
   private var verbose = false
+  private var outFile = Optional.empty<File>()
   private var token: String = "<not requested>"
   private val config = loadConfig()
 
@@ -56,6 +58,27 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
   fun verbose(@ShellOption(value = ["off"]) off: Boolean) {
     println("Set verbose to ${!off} (was ${this.verbose})")
     this.verbose = !off
+  }
+
+  @ShellMethod("Set file to write response to")
+  fun outfile(@ShellOption(value = ["--name"]) outFileName: String) {
+    println("Set out file to $outFileName (was ${this.outFile})")
+    val file = File(outFileName)
+    if (file.exists()) {
+      if (file.isFile && file.canWrite()) {
+        this.outFile = Optional.of(file)
+      } else {
+        println("Given file $outFileName exists but, it is not a file or is not writeable.")
+      }
+    } else {
+      val parentFile = file.parentFile
+      if (parentFile.exists() && parentFile.isDirectory && parentFile.canWrite()) {
+        file.createNewFile()
+        this.outFile = Optional.of(file)
+      } else {
+        println("Given file $outFileName does not exists, is not a file or is not writeable.")
+      }
+    }
   }
 
   @ShellMethod("Secure Connect to server")
@@ -128,15 +151,16 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
       val requestEntity = HttpEntity(null, headers)
       println("Send get request to $uri")
       if (verbose) {
-        println("Request headers $headers")
+        println("Request headers: ${format(headers)}")
       }
       val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
-  //    println(response.statusCode)
       if (response.statusCode.is2xxSuccessful) {
-        response.body?.let {
-          val gson = GsonBuilder().setPrettyPrinting().create()
-          val json = gson.fromJson(it, JsonObject::class.java)
-          println(gson.toJson(json))
+        val body = convertBody(response)
+        body.ifPresent { 
+          println("Body:\n```\n${body.get()}\n```\n")
+          outFile.ifPresent {
+            writeToFile(it, body.get())
+          }
         }
       } else {
         println("Not successful request: ${response.statusCode}")
@@ -144,6 +168,34 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     } else {
       println("Given url name $urlName is not configured")
     }
+  }
+
+  private fun format(headers: HttpHeaders): String {
+
+    return headers
+      .map { "Name: ${it.key} => ${it.value.joinToString(" | ", "\"", "\"")}" }
+      .joinToString("\n", "\n---\n", "\n---\n")
+  }
+
+  private fun writeToFile(file: File, content: String) {
+    file.writeText(content)
+  }
+
+  fun convertBody(response: ResponseEntity<String>): Optional<String> {
+    val body = Optional.ofNullable(response.body)
+    return body.map {
+      if (isJsonContent(response)) {
+        val gson = GsonBuilder().setPrettyPrinting().create()
+        val json = gson.fromJson(it, JsonObject::class.java)
+        return@map gson.toJson(json)
+      }
+      return@map it
+    }
+  }
+
+  private fun isJsonContent(response: ResponseEntity<String>): Boolean {
+    val ct = response.headers["Content-Type"]
+    return ct?.contains("application/json") == true
   }
 
   @ShellMethod("List all configured urls")
@@ -195,7 +247,7 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
   internal class CustomDomainConverter : Converter<String, HttpHeaders> {
     override fun convert(headersParam: String): HttpHeaders {
       if (headersParam.isEmpty()) {
-        return HttpHeaders.EMPTY
+        return HttpHeaders()
       }
       val httpHeaders = HttpHeaders()
       val headers = headersParam.split(",")
