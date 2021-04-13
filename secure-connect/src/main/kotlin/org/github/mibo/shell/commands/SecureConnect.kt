@@ -15,10 +15,12 @@ import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption
 import org.springframework.stereotype.Component
+import org.springframework.web.bind.annotation.RequestBody
 import org.yaml.snakeyaml.Yaml
 import java.io.File
 import java.io.FileInputStream
 import java.lang.IllegalArgumentException
+import java.lang.IllegalStateException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,6 +32,7 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
   private var connected = false
   private var verbose = false
   private var outFile = Optional.empty<File>()
+  private var requestContentFile = Optional.empty<File>()
   private var token: String = "<not requested>"
   private val config = loadConfig()
 
@@ -48,8 +51,7 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     } else {
       println("No file found at $configPath. Try classpath with ${configPath.fileName}.")
       val inputStream = this.javaClass
-        .classLoader
-        .getResourceAsStream(configPath.fileName.toString())
+        .classLoader.getResourceAsStream(configPath.fileName.toString())
       return yaml.load(inputStream)
     }
   }
@@ -78,6 +80,17 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
       } else {
         println("Given file $outFileName does not exists, is not a file or is not writeable.")
       }
+    }
+  }
+
+  @ShellMethod("Set file which is used as body for request")
+  fun requestBodyFile(@ShellOption(value = ["--name"]) inFilename: String) {
+    println("Use file content from $inFilename for request (was ${this.requestContentFile})")
+    val file = File(inFilename)
+    if (file.exists() && file.isFile && file.canRead()) {
+      this.requestContentFile = Optional.of(file)
+    } else {
+      println("Given file $inFilename does not exists, is not a file or is not readable.")
     }
   }
 
@@ -139,24 +152,38 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
           @ShellOption(value = ["-p", "--param"], defaultValue = "") params: List<String>,
           @ShellOption(value = ["-h", "--header"], defaultValue = "") headers: HttpHeaders ) {
 
+    request(urlName, params, headers, HttpMethod.GET);
+  }
+
+  @ShellMethod(key = ["post", "p"], value = "Post request with token")
+  fun post(@ShellOption(value = ["-u", "--url"]) urlName: String,
+          @ShellOption(value = ["-p", "--param"], defaultValue = "") params: List<String>,
+          @ShellOption(value = ["-h", "--header"], defaultValue = "") headers: HttpHeaders) {
+
+    request(urlName, params, headers, HttpMethod.POST);
+  }
+
+  private fun request(urlName: String, params: List<String>,
+                      headers: HttpHeaders, requestMethod: HttpMethod) {
+
     if (!connected) {
       connect()
     }
-    val url = readUrl(urlName)
+    val url = loadUrlConfig(urlName)
     if (url.isPresent) {
       val uri = URI(replacePlaceholder(url.get().url, params))
       val rest = RestTemplateBuilder().build()
       headers["Authorization"] = "Bearer $token"
       headers.addAll(url.get().headers)
-      val requestEntity = HttpEntity(null, headers)
-      println("Send get request to $uri")
+      val requestEntity = createHttpEntity(requestMethod, headers)
+      println("Send ${requestMethod.name} request to $uri")
       if (verbose) {
         println("Request headers: ${format(headers)}")
       }
-      val response = rest.exchange(uri, HttpMethod.GET, requestEntity, String::class.java)
+      val response = rest.exchange(uri, requestMethod, requestEntity, String::class.java)
       if (response.statusCode.is2xxSuccessful) {
         val body = convertBody(response)
-        body.ifPresent { 
+        body.ifPresent {
           println("Body:\n```\n${body.get()}\n```\n")
           outFile.ifPresent {
             writeToFile(it, body.get())
@@ -168,6 +195,28 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     } else {
       println("Given url name $urlName is not configured")
     }
+  }
+
+  private fun createHttpEntity(requestMethod: HttpMethod, headers: HttpHeaders): HttpEntity<Any> {
+    return when (requestMethod) {
+        HttpMethod.GET -> {
+          HttpEntity(null, headers)
+        }
+        HttpMethod.POST -> {
+          HttpEntity(readRequestBodyContent(), headers)
+        }
+        else -> {
+          TODO("Not yet supported HttpMethod ${requestMethod.name}")
+        }
+    }
+  }
+
+  fun readRequestBodyContent(): String {
+    if (requestContentFile.isEmpty) {
+      // TODO: replace / refactor to be just a log line
+      throw IllegalStateException("No request Content file set.")
+    }
+    return requestContentFile.get().readText()
   }
 
   private fun format(headers: HttpHeaders): String {
@@ -208,7 +257,10 @@ class SecureConnect(val env: Environment, val args: ApplicationArguments) {
     }
   }
 
-  private fun readUrl(url: String): Optional<UrlConfig> {
+  /**
+   * Load url config from settings.
+   */
+  private fun loadUrlConfig(url: String): Optional<UrlConfig> {
     val urls = getPropertyMap("urls")
                 .orElseThrow { IllegalArgumentException("No urls property found in config") }
     val urlConfig = urls[url]

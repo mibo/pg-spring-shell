@@ -11,6 +11,7 @@ Planned changes/updates/fixes/features for to be part of one of the next _releas
 ## [0.3.0] - 2021-0m-xx
 ### Added
   * Option to write request response to file
+  * Option to send post request with body from file
 
 ### Fixed
   * Fixed wrong `config-template.yaml`  
